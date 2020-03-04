@@ -19,6 +19,9 @@
 #include "Connection.hpp"
 #include "../../../TRex2-lib/src/Common/trace-framework.hpp"
 
+const long concept::connection::Connection::PING_DELAY;
+const long concept::connection::Connection::PING_TIMEOUT;
+
 using concept::connection::Connection;
 using namespace concept::packet;
 using namespace concept::util;
