@@ -1,2 +1,2 @@
 #!/bin/bash
-cd TRex-Java-Client && ant jars && cd ../TRex2-Lib && aclocal && autoreconf --install && ./run_debug_configure && make clean && make -j12 && sudo make install && cd ../TRex-Server && aclocal && autoreconf --install && ./run_debug_configure && make -j12
+cd TRex-Java-client && ant jars && cd ../TRex2-Lib && aclocal && autoreconf --install && ./run_debug_configure && make clean && make -j12 && sudo make install && cd ../TRex-Server && aclocal && autoreconf --install && ./run_debug_configure && make -j12
