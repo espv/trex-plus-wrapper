@@ -1,0 +1,2 @@
+cd "$(dirname "$0")"
+CFLAGS="-g2 -O0 -std=c++z" CXXFLAGS="-g2 -O0 -std=c++1z" CPPFLAGS="-g2 -O0 -std=c++1z" ./configure --with-TRex2=`realpath ../TRex2-lib`

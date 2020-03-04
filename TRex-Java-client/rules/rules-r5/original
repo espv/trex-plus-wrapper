@@ -1,0 +1,7 @@
+Assign      INCOMING_EVENT_TEMP => Temp, INCOMING_EVENT_HUMIDITY => Humidity, 1 => Fire
+Define      Fire(area: string, temp: float)
+From        Humidity(percentage < 25) and
+last        Temp([string] area = Humidity.area, value=TEMPERATURE_VALUE_PLACEHOLDER)
+within      5000 from Temp
+Where       area := Temp.area, temp := AVG(Temp.value(value=TEMPERATURE_VALUE_PLACEHOLDER)) within 5000 from Humidity
+Consuming   Temp, Humidity;

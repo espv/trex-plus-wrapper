@@ -1,0 +1,25 @@
+#!/bin/bash
+rule_directory=$1
+if [[ -z $rule_directory || ! -d $rule_directory ]]
+then
+	echo "USAGE: script <path to rule file>"
+	exit
+fi
+cd $rule_directory
+cd Generated
+
+file=$(ls . | shuf -n 1)
+while [[ ! -d $file ]]
+do
+	file=$(ls . | shuf -n 1)
+done
+
+cd $file
+file=$(ls . | shuf -n 1)
+while [[ ! -f $file ]]
+do
+	file=$(ls . | shuf -n 1)
+done
+
+echo `pwd`/$file
+cat `pwd`/$file

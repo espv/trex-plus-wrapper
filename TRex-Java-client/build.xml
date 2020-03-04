@@ -1,0 +1,101 @@
+<project name="TRex-client" default="compile" basedir=".">
+  <target name="init">
+    <mkdir dir="bin"/>
+  </target>
+
+  <target name="compileLib" depends="init" description="compile TRex client library">
+    <javac srcdir="src" destdir="bin"
+	   classpath="lib/antlr-4.7.2-complete.jar"
+	   debug ="on" 
+	   includeantruntime="false"
+	   excludes="polimi/trex/examples/**">
+	   
+	<compilerarg value="-Xlint:unchecked" />
+    </javac>
+  </target>
+
+  <target name="compileClient" depends="init,compileLib" description="compile TRex client application">
+    <javac srcdir="src" destdir="bin" 
+           classpath="bin:lib/antlr-4.7.2-complete.jar"
+	   debug ="on" 
+	   includeantruntime="false"
+	   includes="polimi/trex/examples/**">
+
+	<compilerarg value="-Xlint:unchecked" />
+   </javac>
+  </target>
+
+  <target name="compile" depends="compileLib,compileClient" description="compile all classes">
+    <javac srcdir="src" destdir="bin" 
+	    classpath="lib/antlr-4.7.2-complete.jar"
+	   debug ="on"
+	   includeantruntime="false">
+
+	   <compilerarg value="-Xlint:unchecked" />
+   </javac>
+  </target>
+
+  <target name="jarLib" depends="compileLib" description="prepare TRex-client-lib.jar">
+    <jar destfile="${ant.project.name}-lib.jar" basedir="bin" 
+         excludes="polimi/trex/examples/**"
+	 update="true"/>
+  </target>
+
+  <target name="jarClient" depends="compileClient" description="prepare TRex-client.jar">
+    <jar destfile="${ant.project.name}.jar" basedir="bin" 
+         includes="polimi/trex/examples/**" 
+	 update="true">
+         <manifest>
+            <attribute name="Built-By" value="Gianpaolo Cugola"/>
+            <attribute name="Main-Class" value="polimi/trex/examples/CommandLineClient"/>
+            <attribute name="Class-Path" value="TRex-client-lib.jar lib/antlr-4.7.2-complete.jar"/>
+         </manifest>
+    </jar>
+  </target>
+
+  <target name="jarWriteQueryBinary" depends="compileClient" description="prepare TRex-ParseRuleWriteBinary.jar">
+    <jar destfile="TRex-ParseRuleWriteBinary.jar" basedir="bin"
+         includes="polimi/trex/examples/**"
+         update="true">
+         <manifest>
+            <attribute name="Built-By" value="Gianpaolo Cugola"/>
+            <attribute name="Main-Class" value="polimi/trex/examples/ParseRuleWriteBinary"/>
+            <attribute name="Class-Path" value="TRex-client-lib.jar lib/antlr-4.7.2-complete.jar"/>
+         </manifest>
+    </jar>
+  </target>
+
+  <target name="doc" description="create documentation">
+    <javadoc sourcepath="src"
+	     classpath="lib/antlr-4.7.2-complete.jar"
+             packagenames="polimi.trex.*"
+             excludepackagenames="polimi.trex.examples.*"
+             defaultexcludes="yes"
+             destdir="doc"
+             author="true"
+             version="true"
+             use="true"
+             windowtitle="${ant.project.name} API"/>
+  </target>
+
+  <target name="jars" depends="jarLib, jarClient, jarWriteQueryBinary" description="prepare all jars">
+  </target>
+
+  <target name="dist" depends="jars, doc" description="prepare the files to be distributed">
+  	<zip destfile="${ant.project.name}-src.zip" basedir="." 
+	     includes="src/** lib/** build.xml licence.txt TESLA.g4" />
+  	<zip destfile="${ant.project.name}-doc.zip" basedir="." includes="doc/**" />
+  </target>
+
+  <target name="clean" description="clean up">
+    <delete dir="bin" />
+  </target>
+
+  <target name="distclean" depends="clean" description="clean up completely">
+    <delete dir="doc"/>
+    <delete file="${ant.project.name}.jar"/>
+    <delete file="${ant.project.name}-lib.jar"/>
+    <delete file="${ant.project.name}-src.zip"/>
+    <delete file="${ant.project.name}-doc.zip"/>
+  </target>
+ </project>
