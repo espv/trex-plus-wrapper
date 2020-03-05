@@ -222,7 +222,7 @@ ExperimentAPI::AddDataset(const YAML::Node& ds) {
 }
 
 std::string
-ExperimentAPI::ProcessDataset(const YAML::Node& ds) {
+ExperimentAPI::SendDsAsStream(const YAML::Node& ds) {
   //cout << "Processing dataset " << ds["id"] << endl;
   auto file_name = ds["file"].as<string>();
   boost::replace_all(file_name, "~", getenv("HOME"));
@@ -350,7 +350,7 @@ ExperimentAPI::ProcessDataset(const YAML::Node& ds) {
 }
 
 std::string
-ExperimentAPI::AddStreamSchemas(YAML::Node stream_schemas) {
+ExperimentAPI::AddSchemas(YAML::Node stream_schemas) {
   cout << "Adding stream schema for streams ";
   for (YAML::iterator it = stream_schemas.begin(); it != stream_schemas.end(); ++it) {
     const YAML::Node& stream_schema = *it;
@@ -362,7 +362,7 @@ ExperimentAPI::AddStreamSchemas(YAML::Node stream_schemas) {
 }
 
 std::string
-ExperimentAPI::AddQueries(const YAML::Node& query) {
+ExperimentAPI::DeployQueries(const YAML::Node& query) {
   cout << "Adding query " << query["id"] << endl;
   auto sql_query = query["sql-query"]["t-rex"].as<string>();
   if (std::all_of(sql_query.begin(),sql_query.end(),::isspace)) {
@@ -381,7 +381,7 @@ ExperimentAPI::AddQueries(const YAML::Node& query) {
 }
 
 std::string
-ExperimentAPI::AddSubscriberOfStream(int stream_id, int node_id) {
+ExperimentAPI::AddNextHop(int stream_id, int node_id) {
   cout << "Adding Node " << node_id << " as subscriber of stream with Id " << stream_id << endl;
   // Need to find RequestHandler &parent of the node we want to add as subscriber.
   // We first get the IP and port from the slave, who gets it from the master,
@@ -392,7 +392,7 @@ ExperimentAPI::AddSubscriberOfStream(int stream_id, int node_id) {
 }
 
 std::string
-ExperimentAPI::SetNodeIdToAddress(const YAML::Node& newNodeIdToIpAndPort) {
+ExperimentAPI::SetNidToAddress(const YAML::Node& newNodeIdToIpAndPort) {
   cout << "Updating Node Id and address" << endl;
   auto map = newNodeIdToIpAndPort.as<std::map<int, YAML::Node>>();
 
@@ -457,13 +457,13 @@ ExperimentAPI::ClearTuples() {
 }
 
 std::string
-ExperimentAPI::RunEnvironment() {
+ExperimentAPI::StartRuntimeEnv() {
   cout << "Running environment" << endl;
   return "Success";
 }
 
 std::string
-ExperimentAPI::StopEnvironment() {
+ExperimentAPI::StopRuntimeEnv() {
   cout << "Stopping environment" << endl;
   writeBufferToFile();
   this->this_engine->deleteStacksRules();
@@ -471,7 +471,7 @@ ExperimentAPI::StopEnvironment() {
 }
 
 std::string
-ExperimentAPI::CleanupExperiment() {
+ExperimentAPI::EndExperiment() {
   cout << "Cleanup after experiment" << endl;
   writeBufferToFile();
   *cont = false;
@@ -479,19 +479,19 @@ ExperimentAPI::CleanupExperiment() {
 }
 
 std::string
-ExperimentAPI::AddTracepointIds(std::vector<int> tracepointIds) {
+ExperimentAPI::AddTpIds(std::vector<int> tracepointIds) {
   setupTraceFramework(tracepointIds, this->trace_output_folder);
   return "Success";
 }
 
 std::string
-ExperimentAPI::NotifyAfterNoReceivedTuple(int milliseconds) {
+ExperimentAPI::RetEndOfStream(int milliseconds) {
   long time_diff = 0;
   do {
     int microseconds = milliseconds * 1000;
     usleep(microseconds);
     time_diff = chrono::system_clock::now().time_since_epoch().count()/1000000 - this->this_engine->timeLastRecvdTuple;
-    std::cout << "NotifyAfterNoReceivedTuple, time_diff: " << time_diff << ", milliseconds: " << milliseconds << std::endl;
+    std::cout << "RetEndOfStream, time_diff: " << time_diff << ", milliseconds: " << milliseconds << std::endl;
   } while (time_diff < milliseconds || this->this_engine->timeLastRecvdTuple == 0);
   cout << "timeLastRecvdTuple: " << this->this_engine->timeLastRecvdTuple << std::endl;
   this->this_engine->timeLastRecvdTuple = 0;
@@ -522,18 +522,18 @@ std::string ExperimentAPI::HandleEvent(YAML::Node yaml_event) {
     ret = this->AddTuples(args[0], quantity);
   } else if (cmd == "AddDataset") {
     ret = this->AddDataset(args[0]);
-  } else if (cmd == "ProcessDataset") {
-    ret = this->ProcessDataset(args[0]);
-  } else if (cmd == "AddStreamSchemas") {
-    ret = this->AddStreamSchemas(args);
-  } else if (cmd == "AddQueries") {
-    ret = this->AddQueries(args[0]);
-  } else if (cmd == "AddSubscriberOfStream") {
+  } else if (cmd == "SendDsAsStream") {
+    ret = this->SendDsAsStream(args[0]);
+  } else if (cmd == "AddSchemas") {
+    ret = this->AddSchemas(args);
+  } else if (cmd == "DeployQueries") {
+    ret = this->DeployQueries(args[0]);
+  } else if (cmd == "AddNextHop") {
     int stream_id = (int) args[0].as<int>();
     int nodeId = (int) args[1].as<int>();
-    ret = this->AddSubscriberOfStream(stream_id, nodeId);
-  } else if (cmd == "SetNodeIdToAddress") {
-    ret = this->SetNodeIdToAddress(args[0]);
+    ret = this->AddNextHop(stream_id, nodeId);
+  } else if (cmd == "SetNidToAddress") {
+    ret = this->SetNidToAddress(args[0]);
   } else if (cmd == "ProcessTuples") {
     int number_tuples = args[0].as<int>();
     ret = this->ProcessTuples(number_tuples);
@@ -541,16 +541,16 @@ std::string ExperimentAPI::HandleEvent(YAML::Node yaml_event) {
     ret = this->ClearQueries();
   } else if (cmd == "ClearTuples") {
     ret = this->ClearTuples();
-  } else if (cmd == "RunEnvironment") {
-    ret = this->RunEnvironment();
-  } else if (cmd == "StopEnvironment") {
-    ret = this->StopEnvironment();
-  } else if (cmd == "CleanupExperiment") {
-    ret = this->CleanupExperiment();
-  } else if (cmd == "AddTracepointIds") {
-    ret = this->AddTracepointIds(args.as<std::vector<int>>());
-  } else if (cmd == "NotifyAfterNoReceivedTuple") {
-    ret = this->NotifyAfterNoReceivedTuple(args[0].as<int>());
+  } else if (cmd == "StartRuntimeEnv") {
+    ret = this->StartRuntimeEnv();
+  } else if (cmd == "StopRuntimeEnv") {
+    ret = this->StopRuntimeEnv();
+  } else if (cmd == "EndExperiment") {
+    ret = this->EndExperiment();
+  } else if (cmd == "AddTpIds") {
+    ret = this->AddTpIds(args.as<std::vector<int>>());
+  } else if (cmd == "RetEndOfStream") {
+    ret = this->RetEndOfStream(args[0].as<int>());
   } else if (cmd == "TraceTuple") {
     ret = this->TraceTuple(args[0].as<int>(), args[1].as<std::vector<std::string>>());
   } else {
