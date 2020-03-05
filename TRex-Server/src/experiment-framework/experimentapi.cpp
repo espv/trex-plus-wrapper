@@ -140,9 +140,11 @@ ExperimentAPI::AddTuples(const YAML::Node& tuple, int quantity) {
 std::string
 ExperimentAPI::AddDataset(const YAML::Node& ds) {
   cout << "Adding dataset " << ds["id"] << endl;
-  ifstream ifile(ds["file"].as<string>());
+  auto file_name = ds["file"].as<string>();
+  boost::replace_all(file_name, "~", getenv("HOME"));
   auto dataset_type = ds["type"].as<string>();
   if (dataset_type == "csv") {
+    ifstream ifile(file_name);
     vector<string> lines;
     vector<vector<string> > csv;
     string line;
@@ -211,7 +213,7 @@ ExperimentAPI::AddDataset(const YAML::Node& ds) {
       eventIDs.push_back(0);
     }
   } else if (dataset_type == "yaml") {
-    YAML::Node dataset_tuples = YAML::LoadFile(ds["file"].as<string>());
+    YAML::Node dataset_tuples = YAML::LoadFile(file_name);
     for (const YAML::Node& tuple : dataset_tuples["cepevents"].as<std::vector<YAML::Node>>()) {
       AddTuples(tuple, 1);
     }
@@ -222,13 +224,15 @@ ExperimentAPI::AddDataset(const YAML::Node& ds) {
 std::string
 ExperimentAPI::ProcessDataset(const YAML::Node& ds) {
   //cout << "Processing dataset " << ds["id"] << endl;
-  ifstream ifile(ds["file"].as<string>());
+  auto file_name = ds["file"].as<string>();
+  boost::replace_all(file_name, "~", getenv("HOME"));
   bool realistic_timing = false;
 
   int number_tuples = 0;
   auto dataset_type = ds["type"].as<string>();
   int dataset_id = ds["id"].as<int>();
   if (dataset_type == "csv") {
+    ifstream ifile(file_name);
     vector<string> lines;
     vector<vector<string> > csv;
     string line;
@@ -304,7 +308,7 @@ ExperimentAPI::ProcessDataset(const YAML::Node& ds) {
     auto rowtime_column = schema["rowtime-column"];
     auto prevTime = chrono::system_clock::now().time_since_epoch().count();
     if (dataset_to_tuples.find(dataset_id) == this->dataset_to_tuples.end()) {
-      YAML::Node dataset_tuples = YAML::LoadFile(ds["file"].as<string>());
+      YAML::Node dataset_tuples = YAML::LoadFile(file_name);
       dataset_to_tuples[dataset_id] = dataset_tuples["cepevents"].as<std::vector<YAML::Node>>();
     }
     std::vector<YAML::Node> cepevents = dataset_to_tuples[dataset_id];
