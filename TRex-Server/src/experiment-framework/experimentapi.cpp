@@ -140,8 +140,8 @@ ExperimentAPI::AddTuples(const YAML::Node& tuple, int quantity) {
 std::string
 ExperimentAPI::AddDataset(const YAML::Node& ds) {
   cout << "Adding dataset " << ds["id"] << endl;
-  auto file_name = ds["file"].as<string>();
-  boost::replace_all(file_name, "~", getenv("HOME"));
+  std::string expose_path = getenv("EXPOSE_PATH");
+  auto file_name = expose_path + "/" + ds["file"].as<string>();
   auto dataset_type = ds["type"].as<string>();
   if (dataset_type == "csv") {
     ifstream ifile(file_name);
@@ -224,8 +224,8 @@ ExperimentAPI::AddDataset(const YAML::Node& ds) {
 std::string
 ExperimentAPI::SendDsAsStream(const YAML::Node& ds) {
   //cout << "Processing dataset " << ds["id"] << endl;
-  auto file_name = ds["file"].as<string>();
-  boost::replace_all(file_name, "~", getenv("HOME"));
+  std::string expose_path = getenv("EXPOSE_PATH");
+  auto file_name = expose_path + "/" + ds["file"].as<string>();
   bool realistic_timing = false;
 
   int number_tuples = 0;
