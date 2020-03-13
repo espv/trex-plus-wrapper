@@ -400,10 +400,10 @@ ExperimentAPI::SetNidToAddress(const YAML::Node& newNodeIdToIpAndPort) {
     if (node_id == this->node_id) {
       continue;
     }
-    std::cout << "Node " << node_id << " has IP " << address["ip"] << " and port " << address["port"] << std::endl;
     auto it = this->clients.find(node_id);
     if (it == this->clients.end()) {
       // Add new client
+      std::cout << "Node " << node_id << " has IP " << address["ip"] << " and port " << address["port"] << std::endl;
       for (int i = 0; i < number_threads; i++) {
         TcpClient *client = TcpClient::start_connection(address.as<std::map<std::string, std::string>>());
         client->set_node_id(node_id);
