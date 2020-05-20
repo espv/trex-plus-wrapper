@@ -93,6 +93,7 @@ public:
     std::string SendDsAsStream(const YAML::Node& ds);
     std::string AddSchemas(YAML::Node stream_schema);
     std::string DeployQueries(const YAML::Node& query);
+    std::string WriteStreamToCsv(int stream_id, std::string csvFilename);
     std::string AddNextHop(int stream_id, int nodeId);
     std::string SetNidToAddress(const YAML::Node& newNodeIdToIpAndPort);
     std::string ProcessTuples(int number_tuples);

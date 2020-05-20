@@ -53,7 +53,7 @@
  * It is better to keep this value as low as minimum to enhance the GPU engine's
  * performance
  */
-#define STRING_VAL_LEN 32
+#define STRING_VAL_LEN 128
 
 /**
  * Max recurion depth

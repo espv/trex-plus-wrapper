@@ -290,7 +290,7 @@ ExperimentAPI::SendDsAsStream(const YAML::Node& ds) {
           throw "Invalid attribute type in dataset";
         }
       }
-      auto stream_id = ds["stream-id"].as<int>();
+      /*auto stream_id = ds["stream-id"].as<int>();
       auto pubPkt = new PubPkt(stream_id, attr, row.size());
       auto marshalled_packet = marshaller.marshal(concept::packet::PktPtr(pubPkt));
       auto *marshalled_regular_packet = new vector<char>();
@@ -299,10 +299,10 @@ ExperimentAPI::SendDsAsStream(const YAML::Node& ds) {
       }
 
       allPackets.emplace_back(marshalled_regular_packet->size(), *marshalled_regular_packet);
-      eventIDs.push_back(0);
+      eventIDs.push_back(0);*/
     }
   } else if (dataset_type == "yaml") {
-    auto stream_id = ds["stream-id"].as<long>();
+    auto stream_id = ds["id"].as<long>();
     YAML::Node schema = stream_id_to_schema[stream_id];
     double prevTimestamp = 0;
     auto rowtime_column = schema["rowtime-column"];
@@ -363,20 +363,40 @@ ExperimentAPI::AddSchemas(YAML::Node stream_schemas) {
 
 std::string
 ExperimentAPI::DeployQueries(const YAML::Node& query) {
+  if (!query["sql-query"]["t-rex"]) {
+    return "T-Rex query not available";
+  }
   cout << "Adding query " << query["id"] << endl;
   auto sql_query = query["sql-query"]["t-rex"].as<string>();
   if (std::all_of(sql_query.begin(),sql_query.end(),::isspace)) {
     std::cout << "Query is empty, nothing to add" << std::endl;
     return "Query is empty, nothing to add";
   }
-  ofstream ofile("query_for_trex");
-  std::cout << "Query: \n'" << sql_query << "'" << std::endl;
-  ofile.write(sql_query.c_str(), sizeof(char)*sql_query.length());
-  ofile.close();
+  std::vector<string> sql_queries;
+  boost::split(sql_queries, sql_query, boost::is_any_of(";"));
 
-  std::cout << "Running command `java -jar TRex-Java-client/TRex-client.jar localhost " + this->client_port + " -rule query_for_trex`" << std::endl;
-  std::string cmd = "java -jar TRex-Java-client/TRex-client.jar localhost " + this->client_port + " -rule query_for_trex";
-  system(cmd.c_str());
+  for (auto sql_query : sql_queries) {
+    if (std::all_of(sql_query.begin(),sql_query.end(),::isspace)) {
+      continue;
+    }
+    sql_query.append(";");
+    ofstream ofile("query_for_trex");
+    std::cout << "Query: \n'" << sql_query << "'" << std::endl;
+    ofile.write(sql_query.c_str(), sizeof(char) * sql_query.length());
+    ofile.close();
+
+    std::cout << "Running command `java -jar TRex-Java-client/TRex-client.jar localhost " + this->client_port +
+                 " -rule query_for_trex`" << std::endl;
+    std::string cmd =
+            "java -jar TRex-Java-client/TRex-client.jar localhost " + this->client_port + " -rule query_for_trex";
+    system(cmd.c_str());
+  }
+  return "Success";
+}
+
+std::string
+ExperimentAPI::WriteStreamToCsv(int stream_id, std::string csvFilename) {
+  //this->this_engine->streamIdToCsvFile.put(stream_id, csvFilename);
   return "Success";
 }
 
@@ -400,10 +420,10 @@ ExperimentAPI::SetNidToAddress(const YAML::Node& newNodeIdToIpAndPort) {
     if (node_id == this->node_id) {
       continue;
     }
-    auto it = this->this_engine->clients.find(node_id);
-    if (it == this->this_engine->clients.end()) {
+    std::cout << "Node " << node_id << " has IP " << address["ip"] << " and port " << address["port"] << std::endl;
+    auto it = this->clients.find(node_id);
+    if (it == this->clients.end()) {
       // Add new client
-      std::cout << "Node " << node_id << " has IP " << address["ip"] << " and port " << address["port"] << std::endl;
       for (int i = 0; i < number_threads; i++) {
         TcpClient *client = TcpClient::start_connection(address.as<std::map<std::string, std::string>>());
         client->set_node_id(node_id);
@@ -426,15 +446,14 @@ ExperimentAPI::ProcessTuples(int number_tuples) {
     PubPkt *rawPkt = this->allRawPackets.at(i);
     std::pair<std::size_t, std::vector<char>> marshalled_pkt = this->allPackets.at(i);
     int tuple_stream_id = rawPkt->getEventType();
-    if (vldb_tweak_for_experiment4) {
-      // This tweak is to ensure that both 16, 17 and 18 get transmitted to Node 2, even though only 16 is supposed to
-      tuple_stream_id = 16;
-    }
+    std::cout << "Sending tuple " << i << std::endl;
     for (auto nid : this->streamIdToNodes[tuple_stream_id]) {
       auto *pair = new std::pair<std::size_t, std::vector<char>>(marshalled_pkt.first, marshalled_pkt.second);
       this->this_engine->clients[nid][rand() % number_threads]->sendPubPkt(pair);
     }
+    std::cout << "Sent tuple " << i << std::endl;
   }
+  std::cout << "Done" << std::endl;
   return "Success";
 }
 
@@ -528,6 +547,8 @@ std::string ExperimentAPI::HandleEvent(YAML::Node yaml_event) {
     ret = this->AddSchemas(args);
   } else if (cmd == "DeployQueries") {
     ret = this->DeployQueries(args[0]);
+  } else if (cmd == "WriteStreamToCsv") {
+    ret = this->WriteStreamToCsv(args[0].as<int>(), args[1].as<std::string>());
   } else if (cmd == "AddNextHop") {
     int stream_id = (int) args[0].as<int>();
     int nodeId = (int) args[1].as<int>();
@@ -649,9 +670,13 @@ int ExperimentAPI::RunExperiment() {
         for (int j = i + 1; line[j] != '\n' && line[j] != '\0'; j++) {
           line[j] = line[j + 1];
         }
+      } else if (line[i] == '\\') {
+        line[i] = ' ';
       }
     }
 
+    std::string str_line = std::string(line);
+    std::cout << "Deserialized cmd " << str_line << std::endl;
     YAML::Node yaml_event = YAML::Load(line);
     std::string response = HandleEvent(yaml_event) + "\n";
     int sent = 0;
