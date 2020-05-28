@@ -446,12 +446,10 @@ ExperimentAPI::ProcessTuples(int number_tuples) {
     PubPkt *rawPkt = this->allRawPackets.at(i);
     std::pair<std::size_t, std::vector<char>> marshalled_pkt = this->allPackets.at(i);
     int tuple_stream_id = rawPkt->getEventType();
-    std::cout << "Sending tuple " << i << std::endl;
     for (auto nid : this->streamIdToNodes[tuple_stream_id]) {
       auto *pair = new std::pair<std::size_t, std::vector<char>>(marshalled_pkt.first, marshalled_pkt.second);
       this->this_engine->clients[nid][rand() % number_threads]->sendPubPkt(pair);
     }
-    std::cout << "Sent tuple " << i << std::endl;
   }
   std::cout << "Done" << std::endl;
   return "Success";
