@@ -605,29 +605,34 @@ int ExperimentAPI::RunExperiment() {
   nodeIdNum[i++] = '\0';
 
   int sock = 0, valread;
-  struct sockaddr_in serv_addr;
   char buffer[1024] = {0};
-  if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-  {
-    printf("\n Socket creation error \n");
-    return -1;
+
+  struct addrinfo hints = {};
+  struct addrinfo *result, *rp;
+  hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = AI_PASSIVE;    /* For wildcard IP address */
+  hints.ai_protocol = IPPROTO_TCP;          /* Any protocol */
+
+  int s = getaddrinfo(client_ipStr, coordinator_portNum, &hints, &result);
+
+  if (s != 0) {
+    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
+    exit(EXIT_FAILURE);
   }
 
-  serv_addr.sin_family = AF_INET;
-  serv_addr.sin_port = htons(std::stoi(coordinator_portNum));
+  for (rp = result; rp != NULL; rp = rp->ai_next) {
+    sock = socket(rp->ai_family, rp->ai_socktype,
+                 rp->ai_protocol);
+    if (sock == -1)
+      continue;
 
-  // Convert IPv4 and IPv6 addresses from text to binary form
-  if(inet_pton(AF_INET, coordinator_ipStr, &serv_addr.sin_addr)<=0)
-  {
-    printf("\nInvalid address/ Address not supported \n");
-    return -1;
+    if (connect(sock, rp->ai_addr, rp->ai_addrlen) == 0)
+      break;                  /* Success */
+
+    close(sock);
   }
 
-  if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-  {
-    printf("\nConnection Failed \n");
-    return -1;
-  }
   write(sock, nodeIdNum, strlen(nodeIdNum));
   usleep(1000);
   write(sock, client_ipStr, strlen(client_ipStr));
